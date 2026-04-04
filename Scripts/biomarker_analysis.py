@@ -8,10 +8,10 @@ from statsmodels.stats.multitest import multipletests
 data = pd.read_csv("../data/gene_expression.csv")
 
 data = data.dropna(subset=["Healthy", "Disease", "H1", "H2", "H3", "D1", "D2", "D3"])
-data.fillna(data.mean(numeric_only=True), inplace=True)
+data = data.fillna(data.select_dtypes(include=[np.number]).mean())
 
-data["FoldChange"] = data["Disease"] / data["Healthy"]
-data["log2FoldChange"] = np.log2(data["FoldChange"].replace(0, np.nan))
+data["FoldChange"] = data["Disease"] / data["Healthy"].replace(0, np.nan)
+data["log2FoldChange"] = np.log2(data["FoldChange"])
 
 os.makedirs("plots", exist_ok=True)
 
@@ -37,14 +37,14 @@ for _, row in data.iterrows():
     healthy = [row["H1"], row["H2"], row["H3"]]
     disease = [row["D1"], row["D2"], row["D3"]]
     
-    stat, p_val = ttest_ind(healthy, disease, equal_var=False)
+    stat, p_val = ttest_ind(healthy, disease, equal_var=False, nan_policy='omit')
     p_values.append(p_val)
 
 data["p_value"] = p_values
 
 data["adj_p_values"] = multipletests(data["p_value"], method="fdr_bh")[1]
 
-data["neg_log10_pval"] = -np.log10(data["p_value"])
+data["neg_log10_pval"] = -np.log10(data["p_value"].replace(0, np.nan))
 
 plt.figure(figsize=(8, 6))
 plt.scatter(data["log2FoldChange"], data["neg_log10_pval"], alpha=0.7)
