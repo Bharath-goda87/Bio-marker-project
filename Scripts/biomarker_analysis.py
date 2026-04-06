@@ -1,11 +1,13 @@
 import pandas as pd
 import matplotlib.pyplot as plt
+import seaborn as sns
 import os
 import numpy as np
 from scipy.stats import ttest_ind
 from statsmodels.stats.multitest import multipletests
 
-data = pd.read_csv("../data/gene_expression.csv")
+data = pd.read_csv("data/gene_expression.csv")
+
 
 data = data.dropna(subset=["Healthy", "Disease", "H1", "H2", "H3", "D1", "D2", "D3"])
 data = data.fillna(data.select_dtypes(include=[np.number]).mean())
@@ -13,7 +15,10 @@ data = data.fillna(data.select_dtypes(include=[np.number]).mean())
 data["FoldChange"] = data["Disease"] / data["Healthy"].replace(0, np.nan)
 data["log2FoldChange"] = np.log2(data["FoldChange"])
 
+
 os.makedirs("plots", exist_ok=True)
+os.makedirs("results", exist_ok=True)
+
 
 plt.figure(figsize=(20, 5))
 x = np.arange(len(data["Gene"]))
@@ -31,6 +36,7 @@ plt.tight_layout()
 plt.savefig("plots/gene_expression.png")
 plt.close()
 
+
 p_values = []
 
 for _, row in data.iterrows():
@@ -44,10 +50,32 @@ data["p_value"] = p_values
 
 data["adj_p_values"] = multipletests(data["p_value"], method="fdr_bh")[1]
 
+
 data["neg_log10_pval"] = -np.log10(data["p_value"].replace(0, np.nan))
 
+
+data["Regulation"] = "Not Significant"
+
+data.loc[
+    (data["log2FoldChange"] > 1) & (data["adj_p_values"] < 0.05),
+    "Regulation"
+] = "Upregulated"
+
+data.loc[
+    (data["log2FoldChange"] < -1) & (data["adj_p_values"] < 0.05),
+    "Regulation"
+] = "Downregulated"
+
+
 plt.figure(figsize=(8, 6))
-plt.scatter(data["log2FoldChange"], data["neg_log10_pval"], alpha=0.7)
+
+colors = data["Regulation"].map({
+    "Upregulated": "red",
+    "Downregulated": "blue",
+    "Not Significant": "grey"
+})
+
+plt.scatter(data["log2FoldChange"], data["neg_log10_pval"], c=colors, alpha=0.7)
 
 plt.axvline(x=-1, linestyle="--")
 plt.axvline(x=1, linestyle="--")
@@ -60,14 +88,30 @@ plt.tight_layout()
 plt.savefig("plots/volcano_plot.png")
 plt.close()
 
+heatmap_data = data[["H1","H2","H3","D1","D2","D3"]]
+
+plt.figure(figsize=(10, 8))
+sns.heatmap(heatmap_data, cmap="viridis")
+plt.title("Gene Expression Heatmap")
+plt.savefig("plots/heatmap.png")
+plt.close()
+
 biomarkers = data[data["FoldChange"] > 2.5]
 
 significant = data[
     (np.abs(data["log2FoldChange"]) > 1) &
     (data["adj_p_values"] < 0.05)
 ]
+data.to_csv("results/full_results.csv", index=False)
+biomarkers.to_csv("results/top_biomarkers.csv", index=False)
+significant.to_csv("results/significant_genes.csv", index=False)
+print("\nSummary:")
+print(f"Total genes: {len(data)}")
+print(f"Significant genes: {len(significant)}")
+print(f"Upregulated: {sum(data['Regulation'] == 'Upregulated')}")
+print(f"Downregulated: {sum(data['Regulation'] == 'Downregulated')}")
 
-print("Top Biomarkers:")
+print("\nTop Biomarkers:")
 print(biomarkers[["Gene", "FoldChange"]].sort_values(by="FoldChange", ascending=False).head())
 
 print("\nSignificant Genes:")
