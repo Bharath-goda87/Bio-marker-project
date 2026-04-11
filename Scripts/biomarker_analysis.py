@@ -137,3 +137,22 @@ with open("results/analysis_summary.txt", "w") as f:
     f.write(f"Upregulated: {(data['Regulation']=='Upregulated').sum()}\n")
     f.write(f"Downregulated: {(data['Regulation']=='Downregulated').sum()}\n")
 
+print("\nSummary:")
+print(f"Total genes: {len(data)}")
+print(f"Significant genes: {len(significant)}")
+print(f"Upregulated: {(data['Regulation']=='Upregulated').sum()}")
+print(f"Downregulated: {(data['Regulation']=='Downregulated').sum()}")
+
+print("\nTop Biomarkers:")
+print(
+    biomarkers[["Gene", "FoldChange"]]
+    .sort_values(by="FoldChange", ascending=False)
+    .head()
+)
+
+print("\nTop Significant Genes:")
+print(
+    significant[["Gene", "log2FoldChange", "adj_p_values"]]
+    .sort_values(by="adj_p_values")
+    .head()
+)
