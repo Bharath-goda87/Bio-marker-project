@@ -156,3 +156,27 @@ print(
     .sort_values(by="adj_p_values")
     .head()
 )
+data.to_csv(
+    "results/full_results.csv",
+    index=False
+)
+
+biomarkers.to_csv(
+    "results/top_biomarkers.csv",
+    index=False
+)
+
+significant.to_csv(
+    "results/significant_genes.csv",
+    index=False
+)
+
+top_up.to_csv(
+    "results/top_upregulated.csv",
+    index=False
+)
+
+top_down.to_csv(
+    "results/top_downregulated.csv",
+    index=False
+)
