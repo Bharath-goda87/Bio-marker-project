@@ -180,3 +180,14 @@ top_down.to_csv(
     "results/top_downregulated.csv",
     index=False
 )
+data["BiomarkerScore"] = (
+    abs(data["log2FoldChange"]) *
+    -np.log10(data["adj_p_values"].replace(0, 1e-300))
+)
+
+ranked = data.sort_values(by="BiomarkerScore", ascending=False)
+
+ranked.head(20).to_csv(
+    "results/top_ranked_genes.csv",
+    index=False
+)
